@@ -39,8 +39,7 @@ struct DownloadObject {
     
 }
 
-public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDelegate {
-    
+public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDelegate, UIApplicationDelegate {
     //front session
     private var session : NSURLSession!
     //background session
@@ -238,6 +237,7 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
                             localNotification.alertBody = bgNotifString
                             UIApplication.sharedApplication().presentLocalNotificationNow(localNotification)
                         }
+                        self.backgroundCompletion = nil
                     })
                 }
             }
