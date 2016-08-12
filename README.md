@@ -1,7 +1,7 @@
 SwiftyDwnldr
 =================
 
-## SwiftyDwnldr
+## Description
 
 A modern download manager for iOS (Swift) based on NSURLSession to deal with asynchronous downloading of multiple files. 
 
