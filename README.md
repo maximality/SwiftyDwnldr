@@ -7,8 +7,6 @@ A modern download manager for iOS (Swift) based on NSURLSession to deal with asy
 
 SwiftyDwnldr uses the power of `NSURLSession` and `NSURLSessionDownloadTask` to make downloading of files and keeping track of their progress a breeze.
 
-Inspired by https://github.com/chasseurmic/TWRDownloadManager
-
 ## Installing the library
 
 ### Carthage
@@ -110,3 +108,4 @@ public func application(application: UIApplication, handleEventsForBackgroundURL
 ## Contributions
 
 All contributions are welcome. Please fork the project to add functionalities and open a pull request to have them merged into the master branch in the next releases.
+Inspired by https://github.com/chasseurmic/TWRDownloadManager
