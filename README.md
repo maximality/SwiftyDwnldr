@@ -1,6 +1,6 @@
 SwiftyDwnldr
 =================
-
+<img width="374" alt="swiftydwnldr" src="https://cloud.githubusercontent.com/assets/5983656/23771033/8274482a-0526-11e7-8bec-e9b6c01bcace.png">
 ## Description
 
 A modern download manager for iOS (Swift) based on NSURLSession to deal with asynchronous downloading of multiple files. 
