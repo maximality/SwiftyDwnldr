@@ -15,22 +15,22 @@ struct DownloadObject {
     var fileName : String!
     var friendlyName : String!
     var directoryName : String!
-    var startDate : NSDate!
-    var downloadTask : NSURLSessionDownloadTask!
-    var progressClosure : ((progress: CGFloat) -> Void)?
-    var remainingTimeClosure : ((seconds: Int) -> Void)?
-    var completionClosure : ((completed: Bool) -> Void)?
+    var startDate : Date!
+    var downloadTask : URLSessionDownloadTask!
+    var progressClosure : ((_ progress: CGFloat) -> Void)?
+    var remainingTimeClosure : ((_ seconds: Int) -> Void)?
+    var completionClosure : ((_ completed: Bool) -> Void)?
     init(fileName: String,
                   friendlyName: String,
                   directoryName: String,
-                  downloadTask: NSURLSessionDownloadTask,
-                  progressClosure : ((progress: CGFloat) -> Void)?,
-                  remainingTimeClosure : ((seconds: Int) -> Void)?,
-                  completionClosure : ((completed: Bool) -> Void)?) {
+                  downloadTask: URLSessionDownloadTask,
+                  progressClosure : ((_ progress: CGFloat) -> Void)?,
+                  remainingTimeClosure : ((_ seconds: Int) -> Void)?,
+                  completionClosure : ((_ completed: Bool) -> Void)?) {
         self.fileName = fileName
         self.friendlyName = friendlyName
         self.directoryName = directoryName
-        self.startDate = NSDate()
+        self.startDate = Date()
         self.downloadTask = downloadTask
         self.progressClosure = progressClosure
         self.remainingTimeClosure = remainingTimeClosure
@@ -39,51 +39,51 @@ struct DownloadObject {
     
 }
 
-public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDelegate, UIApplicationDelegate {
+open class SDManager: NSObject, URLSessionDelegate, URLSessionDownloadDelegate, UIApplicationDelegate {
     //front session
-    private var session : NSURLSession!
+    fileprivate var session : Foundation.URLSession!
     //background session
-    private var backgroundSession : NSURLSession!
-    private var downloads = [String : DownloadObject]()
+    fileprivate var backgroundSession : Foundation.URLSession!
+    fileprivate var downloads = [String : DownloadObject]()
     
-    private override init() {
+    fileprivate override init() {
         super.init()
-        session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: nil)
-        var backgroundConfiguration : NSURLSessionConfiguration!
+        session = Foundation.URLSession(configuration: URLSessionConfiguration.default, delegate: self, delegateQueue: nil)
+        var backgroundConfiguration : URLSessionConfiguration!
         if (floor(NSFoundationVersionNumber) > NSFoundationVersionNumber_iOS_7_1) {
-            backgroundConfiguration = NSURLSessionConfiguration.backgroundSessionConfigurationWithIdentifier(NSBundle.mainBundle().bundleIdentifier!)
+            backgroundConfiguration = URLSessionConfiguration.background(withIdentifier: Bundle.main.bundleIdentifier!)
         }
         else {
-            backgroundConfiguration = NSURLSessionConfiguration.backgroundSessionConfiguration("ru.wearemad.SwiftyDwnldr")
+            backgroundConfiguration = URLSessionConfiguration.backgroundSessionConfiguration("ru.wearemad.SwiftyDwnldr")
         }
-        self.backgroundSession = NSURLSession(configuration: backgroundConfiguration, delegate: self, delegateQueue: nil)
+        self.backgroundSession = Foundation.URLSession(configuration: backgroundConfiguration, delegate: self, delegateQueue: nil)
     }
-    private func cachesDirectoryPath () -> NSURL {
-        let paths = NSSearchPathForDirectoriesInDomains(.CachesDirectory, .UserDomainMask, true)
+    fileprivate func cachesDirectoryPath () -> URL {
+        let paths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
         let cachesDirectory = paths[0]
-        let cachesDirectoryURL = NSURL(fileURLWithPath: cachesDirectory)
+        let cachesDirectoryURL = URL(fileURLWithPath: cachesDirectory)
         return cachesDirectoryURL
     }
     
     /**
      Singleton manager.
      */
-    public static let sharedInstance = SDManager()
+    open static let sharedInstance = SDManager()
     
     /**
      Current Downloads.
      */
-    public func currentDownloads () -> [NSURL] {
-        return downloads.map { ($0.1.downloadTask.originalRequest?.URL)! }
+    open func currentDownloads () -> [URL] {
+        return downloads.map { ($0.1.downloadTask.originalRequest?.url)! }
     }
     /**
      Background completion
      */
-    public var backgroundCompletion : (() -> Void)?
+    open var backgroundCompletion : (() -> Void)?
     /**
      Background completion notification string
      */
-    public var backgroundCompletionNotificationString : String?
+    open var backgroundCompletionNotificationString : String?
     /**
      Starts a file download
      
@@ -92,13 +92,13 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
      - Parameter directory:   Directory to save.
      - Parameter backgroundMode:  Enabled backgroundDownload.
      */
-    public func downloadFile (url : NSURL,
+    open func downloadFile (_ url : URL,
                               fileName: String?,
                               friendlyName: String?,
                               directoryName: String,
-                              progress: ((progress: CGFloat) -> Void)?,
-                              remainingTime: ((seconds: Int) -> Void)?,
-                              completion: ((completed: Bool) -> Void)?,
+                              progress: ((_ progress: CGFloat) -> Void)?,
+                              remainingTime: ((_ seconds: Int) -> Void)?,
+                              completion: ((_ completed: Bool) -> Void)?,
                               backgroundMode: Bool) {
         //check whether file is already downloading
         if (self.isFileDownloadingForURL(url)) {
@@ -106,15 +106,15 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
             return
         }
         //creating download task
-        var downloadTask : NSURLSessionDownloadTask!
-        let urlRequest = NSURLRequest(URL: url)
+        var downloadTask : URLSessionDownloadTask!
+        let urlRequest = URLRequest(url: url)
         if (backgroundMode) {
-            downloadTask = self.backgroundSession.downloadTaskWithRequest(urlRequest)
+            downloadTask = self.backgroundSession.downloadTask(with: urlRequest)
         }
         else {
-            downloadTask = self.session.downloadTaskWithRequest(urlRequest)
+            downloadTask = self.session.downloadTask(with: urlRequest)
         }
-        let actualFileName = fileName != nil ? fileName! : url.lastPathComponent!
+        let actualFileName = fileName != nil ? fileName! : url.lastPathComponent
         let actualFriendlyName = friendlyName != nil ? friendlyName! : actualFileName
         
         //download object init
@@ -125,10 +125,10 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
     /**
      Cancels all downloads
      */
-    public func cancellAllDownloads () {
+    open func cancellAllDownloads () {
         for (_, item) in self.downloads {
             if let completion = item.completionClosure {
-                completion(completed: false)
+                completion(false)
             }
             item.downloadTask.cancel()
         }
@@ -139,46 +139,46 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
      
      - Parameter url:   File URL to cancel.
      */
-    public func cancelDownloadForURL (url: NSURL) {
-        self.downloads.removeValueForKey(url.absoluteString)
+    open func cancelDownloadForURL (_ url: URL) {
+        self.downloads.removeValue(forKey: url.absoluteString)
     }
     /**
      Returns whether file is downloading
      
      - Parameter url:   File URL to check.
      */
-    public func isFileDownloadingForURL (url: NSURL) -> Bool {
+    open func isFileDownloadingForURL (_ url: URL) -> Bool {
         return self.downloads[url.absoluteString] != nil
     }
     
     // MARK: URLSessionDelegate
-    public func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        let fileURLString = downloadTask.originalRequest?.URL?.absoluteString
+    open func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        let fileURLString = downloadTask.originalRequest?.url?.absoluteString
         if let downloadObject = self.downloads[fileURLString!] {
             //progress
             if let progressClosure = downloadObject.progressClosure {
                 let progress = CGFloat(totalBytesWritten) / CGFloat(totalBytesExpectedToWrite)
-                progressClosure(progress: progress)
+                progressClosure(progress)
             }
             //remainingtime
             if let remainingTimeClosure = downloadObject.remainingTimeClosure {
-                let timeInterval = NSDate().timeIntervalSinceDate(downloadObject.startDate)
+                let timeInterval = Date().timeIntervalSince(downloadObject.startDate)
                 let speed = CGFloat(totalBytesWritten) / CGFloat(timeInterval)
                 let remainingBytes = totalBytesExpectedToWrite - totalBytesWritten
                 let remainingTime = CGFloat(remainingBytes) / speed
-                remainingTimeClosure(seconds: Int(remainingTime))
+                remainingTimeClosure(Int(remainingTime))
             }
         }
 
     }
     
-    public func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
-        let fileURLString = downloadTask.originalRequest?.URL?.absoluteString
+    open func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        let fileURLString = downloadTask.originalRequest?.url?.absoluteString
         if let downloadObject = self.downloads[fileURLString!] {
             var success = true
             
             //response code (maybe there is an error?)
-            if let response = downloadTask.response as? NSHTTPURLResponse {
+            if let response = downloadTask.response as? HTTPURLResponse {
                 let statusCode = response.statusCode
                 if (statusCode >= 400) {
                     print("ERROR: HTTP Status Code " + String(statusCode))
@@ -188,13 +188,13 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
             if (success == true) {
                 //move file to destintaion
                 let directory = self.cachesDirectoryPath()
-                let path = directory.URLByAppendingPathComponent(downloadObject.directoryName)
+                let path = directory.appendingPathComponent(downloadObject.directoryName)
                 do {
-                    if (!NSFileManager.defaultManager().fileExistsAtPath(path.absoluteString)) {
-                        try NSFileManager.defaultManager().createDirectoryAtURL(path, withIntermediateDirectories: true, attributes: nil)
+                    if (!FileManager.default.fileExists(atPath: path.absoluteString)) {
+                        try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true, attributes: nil)
                     }
-                    let destinationLocation = path.URLByAppendingPathComponent(downloadObject.fileName)
-                    try NSFileManager.defaultManager().moveItemAtURL(location, toURL: destinationLocation)
+                    let destinationLocation = path.appendingPathComponent(downloadObject.fileName)
+                    try FileManager.default.moveItem(at: location, to: destinationLocation)
                 } catch {
                     print("Error while moving file!")
                     success = false
@@ -202,40 +202,40 @@ public class SDManager: NSObject, NSURLSessionDelegate, NSURLSessionDownloadDele
 
             }
             if let completionClosure = downloadObject.completionClosure {
-                completionClosure(completed: success)
+                completionClosure(success)
             }
             
-            self.downloads.removeValueForKey(fileURLString!)
+            self.downloads.removeValue(forKey: fileURLString!)
         }
         
     }
-    public func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
+    open func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
             print(error.localizedDescription)
 
             do {
-                let fileURLString = task.originalRequest?.URL?.absoluteString
+                let fileURLString = task.originalRequest?.url?.absoluteString
                 let downloadObject = self.downloads[fileURLString!]
                 
                 if let completionClosure = downloadObject?.completionClosure {
-                    completionClosure(completed: false)
+                    completionClosure(false)
                 }
-                self.downloads.removeValueForKey(fileURLString!)
+                self.downloads.removeValue(forKey: fileURLString!)
             }
         }
     }
     
     // MARK: Background download
-    public func URLSessionDidFinishEventsForBackgroundURLSession(session: NSURLSession) {
+    open func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         session.getTasksWithCompletionHandler { (dataTasks, uploadTasks, downloadTasks) in
             if (downloadTasks.count == 0) {
                 if let backgroundCompletionClosure = self.backgroundCompletion {
-                    dispatch_async(dispatch_get_main_queue(), { 
+                    DispatchQueue.main.async(execute: { 
                         backgroundCompletionClosure()
                         if let bgNotifString = self.backgroundCompletionNotificationString {
                             let localNotification = UILocalNotification()
                             localNotification.alertBody = bgNotifString
-                            UIApplication.sharedApplication().presentLocalNotificationNow(localNotification)
+                            UIApplication.shared.presentLocalNotificationNow(localNotification)
                         }
                         self.backgroundCompletion = nil
                     })
